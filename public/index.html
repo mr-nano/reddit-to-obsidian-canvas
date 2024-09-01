@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit to Markdown Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #0070f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0051a8;
+        }
+        #output {
+            white-space: pre-wrap;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reddit to Markdown Converter</h1>
+    <input type="text" id="linkInput" placeholder="Enter Reddit link here">
+    <button onclick="convertToMarkdown()">Convert to Markdown</button>
+    <button onclick="downloadObsidianCanvas()">Download Obsidian Canvas</button>
+    <h2>Output:</h2>
+    <pre id="output"></pre>
+
+    <script>
+        async function convertToMarkdown() {
+            const link = document.getElementById('linkInput').value;
+            const output = document.getElementById('output');
+            
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ link }),
+                });
+                const data = await response.json();
+                output.textContent = data.markdown;
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function downloadObsidianCanvas() {
+            const markdown = document.getElementById('output').textContent;
+            const canvasData = generateObsidianCanvas(markdown);
+            
+            const blob = new Blob([JSON.stringify(canvasData)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'reddit_thread.canvas';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function generateObsidianCanvas(markdown) {
+            const lines = markdown.split('\n');
+            let nodes = [];
+            let edges = [];
+            let x = 0;
+            let y = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('#')) {
+                    const level = line.split('#').length - 1;
+                    const text = line.replace(/^#+\s*/, '');
+                    nodes.push({
+                        id: `node-${i}`,
+                        x: x,
+                        y: y,
+                        width: 300,
+                        height: 60,
+                        type: 'text',
+                        text: text
+                    });
+                    if (i > 0) {
+                        edges.push({
+                            id: `edge-${i}`,
+                            fromNode: `node-${i-1}`,
+                            fromSide: 'bottom',
+                            toNode: `node-${i}`,
+                            toSide: 'top'
+                        });
+                    }
+                    x += 350;
+                    y += 100 * level;
+                }
+            }
+
+            return {
+                nodes: nodes,
+                edges: edges
+            };
+        }
+    </script>
+</body>
+</html>
