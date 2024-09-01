@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reddit to Markdown Converter</title>
     <style>
+
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -27,11 +28,31 @@
         button:hover {
             background-color: #0051a8;
         }
+        #output-container {
+            position: relative;
+            margin-bottom: 20px;
+            width: 102%; # no sure why I need to do this
+        }
         #output {
             white-space: pre-wrap;
             background-color: #f0f0f0;
             padding: 10px;
             border-radius: 5px;
+            min-height: 50px;
+        }
+        #copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #0070f3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #copy-button:hover {
+            background-color: #0051a8;
         }
     </style>
 </head>
@@ -41,7 +62,10 @@
     <button onclick="convertToMarkdown()">Convert to Markdown</button>
     <button onclick="downloadObsidianCanvas()">Download Obsidian Canvas</button>
     <h2>Output:</h2>
-    <pre id="output"></pre>
+    <div id="output-container">
+        <pre id="output"></pre>
+        <button id="copy-button" onclick="copyToClipboard()">Copy</button>
+    </div>
 
     <script>
         async function convertToMarkdown() {
@@ -118,6 +142,15 @@
                 nodes: nodes,
                 edges: edges
             };
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('output').textContent;
+            navigator.clipboard.writeText(output).then(() => {
+                alert("Copied to clipboard!");
+            }).catch(err => {
+                console.error("Failed to copy: ", err);
+            });
         }
     </script>
 </body>
