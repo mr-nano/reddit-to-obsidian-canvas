@@ -62,6 +62,8 @@ app.post('/convert', async (req, res) => {
 
 
 function redditToObsidianCanvas(redditJson) {
+  let currentY = 0;  // Track the current Y position globally
+
   let nodes = [];
   let edges = [];
   let yOffset = 0;  // Global offset to manage Y positions
@@ -72,7 +74,7 @@ function redditToObsidianCanvas(redditJson) {
     const lineHeight = 20;  // Approximate height per line of text
 
     // Calculate the number of lines (assuming ~50 characters per line for estimation)
-    const numberOfLines = Math.ceil(text.length / 50);
+    const numberOfLines = Math.ceil(text.length / 20); // this is duplicated with numberOfLines in processComment
 
     // Calculate the height based on the number of lines
     const calculatedHeight = Math.max(minHeight, numberOfLines * lineHeight);
@@ -92,7 +94,18 @@ function redditToObsidianCanvas(redditJson) {
   function processComment(comment, parentId = null, x = 0, y = 0, depth = 0) {
     const commentId = uuidv4();
     const nodeText = `${comment.author}: ${comment.body}`;
-    nodes.push(createNode(commentId, nodeText, x, y));
+
+    // Calculate the height of the current node
+    const minHeight = 100;  // Minimum height of the node
+    const lineHeight = 20;  // Approximate height per line of text
+    const numberOfLines = Math.ceil(nodeText.length / 20); // changed 50 to 20 for more lines
+    const nodeHeight = Math.max(minHeight, numberOfLines * lineHeight);
+
+    // Create the node with the updated currentY position
+    nodes.push(createNode(commentId, nodeText, x, currentY));
+
+    // Update currentY for the next node to avoid overlap
+    currentY += nodeHeight + 50;  // Add extra spacing of 50 pixels
 
     // Create an edge between the parent and this comment
     if (parentId !== null) {
@@ -105,21 +118,14 @@ function redditToObsidianCanvas(redditJson) {
       });
     }
 
-    // Update yOffset for the next comment or reply
-    let childY = y + 150;
-
     // Process replies if any
     if (comment.replies && comment.replies.data && comment.replies.data.children) {
       comment.replies.data.children.forEach(reply => {
         if (reply.kind === 't1') {  // It's a comment
-          processComment(reply.data, commentId, x + 400, childY, depth + 1);
-          childY += 150;  // Increase Y for the next sibling
+          processComment(reply.data, commentId, x + 400, currentY, depth + 1);
         }
       });
     }
-
-    // Update global yOffset for the next top-level comment
-    yOffset = Math.max(yOffset, childY);
   }
 
   // Process the main post
@@ -156,10 +162,6 @@ function uuidv4() {
     return v.toString(16);
   });
 }
-
-// Example usage
-// const redditJson = JSON.parse(fs.readFileSync('input_reddit.json', 'utf8'));
-// const canvasJson = redditToObsidianCanvas(redditJson);
 
 // Output the canvas JSON
 // fs.writeFileSync('output_canvas.json', JSON.stringify(canvasJson, null, 4));
